@@ -75,7 +75,16 @@ ZTEST(temp_alarm_check, test_below_threshold)
 	 * Check the status, and how the module talked to the sensor.
 	 * See TEST_SPEC.md "Suite temp_alarm_check" #1.
 	 */
-	ztest_test_skip();
+	struct temp_alarm_status status;
+
+	sensor_fake_set_temperature(20);
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+
+	zassert_equal(status.last_temp, 20, "last_temp must be 20 after reading, got %d",
+		      status.last_temp);
+	zassert_false(status.is_alarming,
+		      "is_alarming must be false after reading below threshold");
 }
 
 ZTEST(temp_alarm_check, test_at_threshold)
@@ -83,7 +92,19 @@ ZTEST(temp_alarm_check, test_at_threshold)
 	/* TODO(l8-task1): a reading equal to the threshold (30 C) is not an alarm.
 	 * See TEST_SPEC.md "Suite temp_alarm_check" #2.
 	 */
-	ztest_test_skip();
+	struct temp_alarm_status status;
+
+	sensor_fake_set_temperature(30);
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+
+	zassert_equal(status.last_temp, 30, "last_temp must be 30 after reading, got %d",
+		      status.last_temp);
+	zassert_false(status.is_alarming,
+		      "is_alarming must be false after reading at threshold");
+	zassert_equal(status.alarm_count, 0U,
+		      "alarm_count must be 0 after reading at threshold, got %u",
+		      status.alarm_count);
 }
 
 ZTEST(temp_alarm_check, test_above_threshold)
@@ -91,7 +112,18 @@ ZTEST(temp_alarm_check, test_above_threshold)
 	/* TODO(l8-task1): a reading of 40 C raises the alarm and counts it.
 	 * See TEST_SPEC.md "Suite temp_alarm_check" #3.
 	 */
-	ztest_test_skip();
+	struct temp_alarm_status status;
+
+	sensor_fake_set_temperature(40);
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+	zassert_equal(status.last_temp, 40, "last_temp must be 40 after reading, got %d",
+		      status.last_temp);
+	zassert_true(status.is_alarming,
+		     "is_alarming must be true after reading above threshold");
+	zassert_equal(status.alarm_count, 1U,
+		      "alarm_count must be 1 after reading above threshold, got %u",
+		      status.alarm_count);
 }
 
 /*
@@ -109,7 +141,21 @@ ZTEST(temp_alarm_threshold, test_new_threshold_clears_alarm)
 	 * above the reading. The alarm must clear and stay cleared.
 	 * See TEST_SPEC.md "Suite temp_alarm_threshold" #1.
 	 */
-	ztest_test_skip();
+	struct temp_alarm_status status;
+ 	 
+	sensor_fake_set_temperature(40);
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+	zassert_true(status.is_alarming,
+		     "is_alarming must be true after reading above threshold");
+	zassert_ok(temp_alarm_set_threshold(50), "set_threshold must succeed");
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+	zassert_false(status.is_alarming,
+		      "is_alarming must be false after raising threshold above reading");
+	zassert_equal(status.alarm_count, 1U,
+		      "alarm_count must remain 1 after raising threshold above reading, got %u",
+		      status.alarm_count);
 }
 
 /*
@@ -127,5 +173,29 @@ ZTEST(temp_alarm_reset, test_reset_clears_state)
 	 * The alarm state must clear, but the last reading must stay.
 	 * See TEST_SPEC.md "Suite temp_alarm_reset" #1.
 	 */
-	ztest_test_skip();
+	struct temp_alarm_status status;
+
+	sensor_fake_set_temperature(40);
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_check(), "temperature check must succeed");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+	zassert_true(status.is_alarming,
+		     "is_alarming must be true after three readings above threshold");
+	zassert_equal(status.alarm_count, 3U,
+		      "alarm_count must be 3 after three readings above threshold, got %u",
+		      status.alarm_count);
+	temp_alarm_reset();
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+	zassert_false(status.is_alarming,
+		      "is_alarming must be false after reset");
+	zassert_equal(status.alarm_count, 0U,
+		      "alarm_count must be 0 after reset, got %u",
+		      status.alarm_count);
+	zassert_equal(status.last_error, 0,
+		      "last_error must be 0 after reset, got %d",
+		      status.last_error);
+	zassert_equal(status.last_temp, 40,
+		      "last_temp must be 40 after reset, got %d",
+		      status.last_temp);
 }

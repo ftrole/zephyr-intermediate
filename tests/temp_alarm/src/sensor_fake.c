@@ -39,7 +39,7 @@ static int custom_sensor_channel_get(const struct device *dev, enum sensor_chann
 /* ---- Fake sensor device -------------------------------------------------- */
 
 /* The API table temp_alarm.c calls through. */
-static const struct sensor_driver_api fake_sensor_api = {
+static DEVICE_API(sensor, fake_sensor_api) = {
 	/* TODO(l8-task0): replace NULL with fake_sensor_sample_fetch. */
 	.sample_fetch = fake_sensor_sample_fetch,
 	.channel_get = fake_sensor_channel_get,
