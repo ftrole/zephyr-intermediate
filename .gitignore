@@ -1,5 +1,7 @@
 # Build
 build
+twister-out/*
+!twister-out/coverage/
 
 # West files
 .west
